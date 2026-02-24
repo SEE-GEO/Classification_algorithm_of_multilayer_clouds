@@ -1,0 +1,171 @@
+
+%This program reads the Radar(Cloudnet) data. The path to the data is specified at the beginning of the
+%in the main program.
+
+clear Cloudnet NoCloudnetNum
+   
+for it = 1:2    
+%open file:
+try
+    
+    if it ==1
+        Cloudnet_long(it).number=i;
+        %file=strxcat('/projekt6/aerocloud/Mamip_projekt/ARM/nsaarsclkazr1kolliasC1.c1.',yyyy(i),Monthfile(i,:),Dayfile(i,:),'.000000.nc');
+        file=strxcat('/projekt2/remsens/data_new/site-campaign/utqiagvik-nsa/KAZR/ARSCL/',yyyy(i),'/nsaarsclkazr1kolliasC1.c1.',yyyy(i),Monthfile(i,:),Dayfile(i,:),'.000000.nc');
+        if yyyy(i) >= 2015
+           file=strxcat('/projekt2/remsens/data_new/site-campaign/utqiagvik-nsa/KAZR/ARSCL/',yyyy(i),'/nsaarsclkazr1kolliasC1.c0.',yyyy(i),Monthfile(i,:),Dayfile(i,:),'.000000.nc');
+         %  file=strxcat('/projekt6/aerocloud/Mamip_projekt/ARM/nsaarsclkazr1kolliasC1.c0.',yyyy(i),Monthfile(i,:),Dayfile(i,:),'.000000.nc');
+        end
+        ncid=netcdf.open(file,'NC_NOWRITE');
+
+        yyyyf=double(yyyy(i));
+        mmf=str2num(Monthfile(i,:));
+        ddf=str2num(Dayfile(i,:)); 
+        
+    elseif it==2
+        Cloudnet_long(it).number=i+1;
+        %file=strxcat('/projekt6/aerocloud/Peggy/Mamip_projekt/ARM/mosarsclkazr1kolliasMC1.c0.',yyyy(i),Monthfile(i,:),Dayfile(i+1,:),'.000000.nc');
+        file=strxcat('/projekt2/remsens/data_new/site-campaign/utqiagvik-nsa/KAZR/ARSCL/',yyyy(i),'/nsaarsclkazr1kolliasC1.c1.',yyyy(i),Monthfile(i,:),Dayfile(i,:),'.000000.nc');
+        if yyyy(i) >= 2015
+           file=strxcat('/projekt2/remsens/data_new/site-campaign/utqiagvik-nsa/KAZR/ARSCL/',yyyy(i),'/nsaarsclkazr1kolliasC1.c0.',yyyy(i),Monthfile(i,:),Dayfile(i+1,:),'.000000.nc');
+          % file=strxcat('/projekt6/aerocloud/Mamip_projekt/ARM/nsaarsclkazr1kolliasC1.c0.',yyyy(i),Monthfile(i,:),Dayfile(i+1,:),'.000000.nc');
+        end
+        ncid=netcdf.open(file,'NC_NOWRITE');
+
+        yyyyf=double(yyyy(i));
+        mmf=str2num(Monthfile(i,:));
+        ddf=str2num(Dayfile(i+1,:)); 
+    end
+     
+
+varid = netcdf.inqVarID(ncid,'time');
+time = double(netcdf.getVar(ncid,varid));
+Cloudnet_long(it).N=datenum(yyyyf,mmf,ddf,0,0,time(1:5:end));
+Cloudnet_long(it).date=datestr(Cloudnet_long(it).N(1));
+
+%height in m
+varid = netcdf.inqVarID(ncid,'height');
+height = double(netcdf.getVar(ncid,varid));
+Cloudnet_long(it).height=height;
+
+%Radar reflectivity factor in dBz:
+varid = netcdf.inqVarID(ncid,'reflectivity_best_estimate');
+Z = double(netcdf.getVar(ncid,varid));
+Z(Z == -9999) = NaN;
+Cloudnet_long(it).Z=Z(:,1:5:end);
+
+ %Radar sensitivity in dBz:
+ varid = netcdf.inqVarID(ncid,'signal_to_noise_ratio');
+ Zsens = double(netcdf.getVar(ncid,varid));
+ Cloudnet_long(it).Zsens=Zsens;
+% 
+% %Radar sensitivity in dBz:
+% varid = netcdf.inqVarID(ncid,'radar_gas_atten');
+% gasatten = double(netcdf.getVar(ncid,varid));
+% Cloudnet_long(it).gasatten=gasatten;
+
+% %Attenuated backscatter coefficient in m-1 sr-1
+% varid = netcdf.inqVarID(ncid,'beta');
+% beta = double(netcdf.getVar(ncid,varid));
+% Cloudnet_long(it).beta=beta;
+
+%Doppler velocity in m s-1
+v=ncread(file, 'mean_doppler_velocity');             
+Cloudnet_long(it).v=v(:,1:5:end);
+
+%Doppler spectral width in m s-1 
+width=ncread(file, 'spectral_width');             
+Cloudnet_long(it).width=width(:,1:5:end);
+
+%Cloud top 
+cloud_top=ncread(file, 'cloud_layer_top_height');             
+Cloudnet_long(it).cloud_top=cloud_top(:,1:5:end);
+
+%Cloud base 
+cloud_base=ncread(file, 'cloud_layer_base_height');             
+Cloudnet_long(it).cloud_base=cloud_base(:,1:5:end);
+
+%category_bits
+ category_bits=ncread(file, 'cloud_mask_mplzwang');             
+ Cloudnet_long(it).category=category_bits;
+ 
+ %quality_bits
+ quality_bits=ncread(file, 'qc_reflectivity_best_estimate');             
+ Cloudnet_long(it).quality=quality_bits;
+% 
+% %model_height for temperature
+% model_height=ncread(file, 'model_height');             
+% Cloudnet_long(it).model_height=model_height;
+% 
+% temperature=ncread(file, 'temperature');             
+% Cloudnet_long(it).temperature=temperature;
+
+%%% target_classification from clasification file
+%varid = netcdf.inqVarID(ncid1,'target_classification');
+%target_classification = double(netcdf.getVar(ncid1,varid));
+%Cloudnet_long(it).target_classification=target_classification;
+
+
+
+netcdf.close(ncid)
+
+%%
+%make Cloudnet smaller, to hmax.
+
+%for limiting height where we look for multi-layer clouds:
+x = Cloudnet_long(it).height;
+valueToMatch = hmax*1e3;
+[minDifferenceValue, indexAtMin] = min(abs(x - valueToMatch));          % Find the closest value.
+
+Cloudnet(it).number=Cloudnet_long(it).number;
+Cloudnet(it).N=Cloudnet_long(it).N;
+Cloudnet(it).date=Cloudnet_long(it).date;
+Cloudnet(it).height=Cloudnet_long(it).height(1:indexAtMin,:);
+Cloudnet(it).Z=Cloudnet_long(it).Z(1:indexAtMin,:);
+Cloudnet(it).Zsens=Cloudnet_long(it).Zsens(1:indexAtMin,:);
+Cloudnet(it).beta=NaN;
+Cloudnet(it).gasatten=NaN;
+Cloudnet(it).v=Cloudnet_long(it).v(1:indexAtMin,:);
+Cloudnet(it).width=Cloudnet_long(it).width(1:indexAtMin,:);
+Cloudnet(it).cloud_base=Cloudnet_long(it).cloud_base;
+Cloudnet(it).cloud_top=Cloudnet_long(it).cloud_top;
+Cloudnet(it).category=Cloudnet_long(it).category(1:indexAtMin,:);
+Cloudnet(it).quality=Cloudnet_long(it).quality(1:indexAtMin,:);
+Cloudnet(it).model_height=NaN;
+Cloudnet(it).temperature=NaN;
+
+       
+NoCloudnet(it).Num=0;                                %if Cloudnet exists: NoCloudnetNum=0
+ 
+   %end
+%end
+ catch                                           %if no Cloudnet exitst
+    Cloudnet(it).number=Cloudnet_long.number;
+    Cloudnet(it).N=NaN;
+    Cloudnet(it).date=NaN;
+    Cloudnet(it).height=NaN;
+    Cloudnet(it).Z=NaN(329,2);
+    Cloudnet(it).Zsens=NaN;
+    Cloudnet(it).beta=NaN;
+    Cloudnet(it).gasatten=NaN;
+    Cloudnet(it).v=NaN;
+    Cloudnet(it).width=NaN;
+    Cloudnet(it).category=NaN;
+    Cloudnet(it).cloud_base=NaN;
+    Cloudnet(it).cloud_top=NaN;
+    Cloudnet(it).quality=NaN;
+    Cloudnet(it).model_height=NaN;
+    Cloudnet(it).temperature=NaN;
+    
+    NoCloudnet(it).Num=1;                            %if no Cloudnet exitst: NoCloudnetNum=1
+    disp('no Cloudnet');
+    
+
+
+end
+   end
+%%
+
+clear quality_bits minDifferenceValue valueToMatch x last mmf ddf yyyyf ncid Radartime v Z width varid ...
+   beta  indexAtMin category_bits model_height Radartemperature Radarheight  Zsens gasatten  lon lat
+% Cloudnet_long
