@@ -1,5 +1,5 @@
-function [maxtime, Sublimation, esati, esatiM]=func_3_icesubl_MHP(RHi1,TK1,P1,z1,r1)
-
+function [maxtime, Sublimation, esati, esatiM]=func_3_icesubl_MHP(RHi1,TK1,P1,z1,r1,Raso,iDate,Cloudixd,k)
+%%
 TC1=TK1-273.15;
 r1=r1*1e-6;                 %ice particle size conversion from mikrometer to SI=m.
 
@@ -128,6 +128,7 @@ lm1=length(m1);
 time=(1:lm1)*0.01/60;                                 %Time in minutes
 
 %write into struct:
+Sublimation(1).date=Raso(iDate).date;
 Sublimation(1).timestep(1)=0;
 Sublimation(1).timestep(2:lm1-1)=[1:lm1-2];
 Sublimation(1).time_min(1)=0;
@@ -161,7 +162,33 @@ if length(Sublimation(1).mass) > length(Sublimation(1).time_min)           %some
     Sublimation(1).mass=Sublimation(1).mass(1:end-1);
 end
 
+%% 
+%Berechnung von Schichtdicke und Fallhöhe
+hoehe=(Sublimation(1).initial_cond(4)*1e-3)-(Cloudixd(iDate).height_sub_bottom(k)*1e-3);
+
+Sublimation(1).Schichtdicke=hoehe;
+
+clear hoehe minDifferenceValue2 indexAt2 minDifferenceValue1 indexAt1 valueToMatch1 x1 x2 valueToMatch2
+
+x1 = Sublimation(1).height;
+valueToMatch1 = Cloudixd(iDate).height_sub_bottom(k);
+[minDifferenceValue1, indexAt1] = min(abs(x1 - valueToMatch1));
+
+x2 = Sublimation(1).mass;
+valueToMatch2 = 0.0;
+[minDifferenceValue2, indexAt2] = min(abs(x2 - valueToMatch2));
+
+if indexAt2<indexAt1
+    Fallzeit=Sublimation(1).timestep(indexAt2);
+elseif indexAt1<=indexAt2
+    Fallzeit=Sublimation(1).timestep(indexAt1);
 end
+
+Sublimation(1).Fallzeit_in_sek=Fallzeit/100;
+Sublimation(1).Fallzeit_in_min=Fallzeit/(60*100);
+
+end
+
 
 %to compare ls with liv/ls2:
 %TC1=[-50:1:0];
@@ -169,4 +196,5 @@ end
 %ls=46782.5+35.8925*TK1-0.07414*TK1.^2+541.5*exp(-(TK1./123.75).^2);
 %Mw=18.01528e-3;
 %liv=ls/Mw;
+
 

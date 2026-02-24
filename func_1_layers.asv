@@ -10,7 +10,6 @@ function[Raso10km, numcloud_i, Cloudixd]=func_1_layers(Raso, hmax,rhthres,minsub
     Cloudixd(iDate).index_sub_top = [];
     Cloudixd(iDate).height_sub_bottom = [];
     Cloudixd(iDate).height_sub_top = [];
-    numcloud_1 = NaN;
 %for limiting height where we look for multi-layer clouds:
 %this program searches for layers that are supersaturated (numcloud_i)
 %%
@@ -26,10 +25,9 @@ RHl10km=Raso(iDate).RHl(1:indexAtMin);
 RHi10km=Raso(iDate).RHi(1:indexAtMin);
 Alt10km=Raso(iDate).alt(1:indexAtMin);
 
-%idxalt = find(Alt10km < 60);  % to test how the statistics change
-%depending on the first radar height
-%RHi10km(idxalt) = NaN;
-%RHl10km(idxalt) = NaN;
+idxalt = find(Alt10km < 60);
+RHi10km(idxalt) = NaN;
+RHl10km(idxalt) = NaN;
 
 RHm10km=max(RHl10km,RHi10km);
 lRHm10km=length(RHm10km);
@@ -49,7 +47,7 @@ Raso10km(iDate).RHl10km=RHl10km;
 Raso10km(iDate).RHi10km=RHi10km;
 Raso10km(iDate).RHm10km=RHm10km;
 %%
-if nansum(Raso10km(iDate).RHl10km) > 50
+if sum(Raso10km(iDate).RHl10km) > 50
 %%
 %Creating a variable RHmclass:
 %RHm < 100%: RHmclass=1 (subsaturated)
@@ -57,7 +55,10 @@ if nansum(Raso10km(iDate).RHl10km) > 50
 %RHm = Nan:  RHmclass=Nan
 
 RHmclass(1:lRHm10km)=0;
-
+%   if nanmean(RHm10km(1:20)) > 100
+%   RHm10km(1:20) = 95;
+%   RHi10km(1:20) = 95;
+%   end
 for ii=1:lRHm10km
     mtot=RHm10km(ii);
     if mtot>=rhthres
@@ -148,16 +149,17 @@ if lindex>=2                                    %i=5: only if min 1 subsaturated
 
     if liquid_sub==1                                           %if there are liquid cases
           lliquid=length(idx_liquid);                             %count how many liquid cases
+    %      lix_sup=lindex-lliquid;                                 %amount ice-subsaturated layers
           ix_sub_bottom(1:lliquid-1)=NaN;                         %delete that layer
           ix_sub_bottom(isnan(ix_sub_bottom)) = [];
           ix_sub_top(1:lliquid-1)=NaN;
           ix_sub_top(isnan(ix_sub_top)) = [];
     
-         lix_sub=lindex-lliquid;                                 %amount ice-subsaturated layers 
-
-    elseif liquid_sub==0                                        %if there is no liquid-supersaturation layer
-        lix_sub=length(ix_sub);
-    end
+         lix_sub=lindex-lliquid;                                 %amount ice-subsaturated layers
+    % % 
+    % % elseif liquid_sub==0                                        %if there is no liquid-supersaturation layer
+    % %     lix_sub=length(ix_sub);
+    % end
 
   
     Cloudixd(iDate).index_sub_top=ix_sub_top;
@@ -165,6 +167,8 @@ if lindex>=2                                    %i=5: only if min 1 subsaturated
      
     Cloudixd(iDate).index_sub_bottom=ix_sub_bottom;
     Cloudixd(iDate).height_sub_bottom=Raso10km(iDate).alt(ix_sub_bottom);
+
+    %lindex = lix_sub; %Peggy, olny ice-subsaturated layers
 
 elseif lindex==1                                                %if there is only 1 subsaturated layer
     index_super_bottom = index_top +1;
@@ -231,7 +235,7 @@ if lindex > 0
             idx_liquid_super(k) = 0;
         end
     end
-
+%Cloudixd(iDate).liquid_super = liquid_super;
     if liquid_super==1                           %remove layers
         ai = find(idx_liquid_super > 1);
         lliqsuper=length(idx_liquid_super);
@@ -240,9 +244,12 @@ if lindex > 0
         index_super_top(isnan(index_super_top)) = [];
         index_super_bottom(ai)=NaN;
         index_super_bottom(isnan(index_super_bottom)) = [];
+    
+        %numcloud_i(iDate).numcloud_i=lindex_super-lliqsuper+1;                    %final number of supersaturated layers
         numcloud_i=lindex_super-lliqsuper+1; 
         
     elseif liquid_super==0                                      %if there are no liquid cases
+        %numcloud_i(iDate).numcloud_i=lindex_super;
         numcloud_i=lindex_super;
     end
     %If supersaturated layer is defined by RHl and not RHi.
@@ -301,6 +308,7 @@ if lindex > 0
     
     try
     for k=1:length(index_super_bottom)                     %k=1: does not work  %if cloudlayer is too thin
+        %layer_dist(k) = Raso10km(iDate).alt(index_super_top(k))-Raso10km(iDate).alt(index_super_bottom(k));
         layer_dist(k) = Raso10km(iDate).alt(index_super_top(k))-Raso10km(iDate).alt(index_super_bottom(k));
     end
     a = find(layer_dist <= 20);
@@ -313,7 +321,16 @@ if lindex > 0
     Cloudixd(iDate).height_sub_top(a) = [];
     Cloudixd(iDate).height_sub_bottom(a+1) = [];
     
-  
+    % Cloudixd(iDate).index_super_top(a) = [];
+    % Cloudixd(iDate).index_super_bottom(a+1) = [];
+    % Cloudixd(iDate).height_super_top(a) = [];
+    % Cloudixd(iDate).height_super_bottom(a+1) = [];
+    % Cloudixd(iDate).index_sub_top(a+1) = [];
+    % Cloudixd(iDate).index_sub_bottom(a+1) = [];
+    % Cloudixd(iDate).height_sub_top(a+1) = [];
+    % Cloudixd(iDate).height_sub_bottom(a+1) = [];
+    %
+    
         
     for k=1:length(Cloudixd(iDate).index_super_bottom)    
         cloud_dist(k)=Raso10km(iDate).alt(Cloudixd(iDate).index_super_top(k))-Raso10km(iDate).alt(Cloudixd(iDate).index_super_bottom(k));
@@ -324,10 +341,11 @@ if lindex > 0
             minsuper = minsuperl;
         end
         if cloud_dist(k)<minsuper
-           Cloudixd(iDate).index_super_bottom(k)=NaN;
-           Cloudixd(iDate).index_super_top(k)=NaN;
-           Cloudixd(iDate).height_super_bottom(k)=NaN;
-           Cloudixd(iDate).height_super_top(k)=NaN;
+            Cloudixd(iDate).index_super_bottom(k)=NaN;
+            Cloudixd(iDate).index_super_top(k)=NaN;
+            Cloudixd(iDate).height_super_bottom(k)=NaN;
+            Cloudixd(iDate).height_super_top(k)=NaN;
+                    % geandert Peggy 21.02.2022 bis zeile 239
            Cloudixd(iDate).index_sub_bottom(k+1)=NaN;
            Cloudixd(iDate).height_sub_bottom(k+1)=NaN;
            Cloudixd(iDate).index_sub_top(k)=NaN;       
@@ -443,4 +461,6 @@ end
 %%         
  if length(Cloudixd(iDate).index_sub_top) == 0
        numcloud_i = 0;
- end
+else
+    numcloud_i = NaN
+end

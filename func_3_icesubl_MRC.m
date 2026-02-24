@@ -1,4 +1,4 @@
-function [maxtime, Sublimation, esati, esatiM]=func_3_icesubl_MRC(RHi1,TK1,P1,z1,r1)
+function [maxtime, Sublimation, esati, esatiM]=func_3_icesubl_MRC(RHi1,TK1,P1,z1,r1,Raso,iDate,Cloudixd,k)
 
 TC1=TK1-273.15;
 r1=r1*1e-6;                 %ice particle size conversion from mikrometer to SI=m.

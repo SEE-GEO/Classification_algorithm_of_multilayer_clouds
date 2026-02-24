@@ -33,6 +33,7 @@ for ij=1:length(Xh)
     elseif X > 1.56e5 && X <= 1e8
         a(ij)=1.0865;
         b(ij)=0.499;
+        
     end
 
 end
